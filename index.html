@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Contrast Checker &#183; AppADay 095</title>
+<meta name="description" content="Paste a text color and a background color and see the WCAG contrast ratio instantly, with pass or fail badges for normal text, large text, and UI elements.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#edeae3;
+    --surface:#ffffff;
+    --ink:#16181d;
+    --muted:#6b6f78;
+    --line:#d9d5cc;
+    --accent:#b4451f;
+    --pass:#146b52;
+    --pass-bg:#e2f2ec;
+    --fail:#a8271d;
+    --fail-bg:#fbe6e3;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Space Grotesk',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(circle at 1px 1px,rgba(22,24,29,.06) 1px,transparent 0);
+    background-size:22px 22px;
+  }
+  a{color:inherit;}
+
+  /* ---------- header ---------- */
+  header{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:14px 20px;
+    background:var(--ink);
+    color:#f4f2ee;
+    border-bottom:3px solid var(--accent);
+  }
+  .num{
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.78rem;
+    letter-spacing:.08em;background:var(--accent);color:#fff;
+    padding:4px 8px;border-radius:6px;
+  }
+  header h1{font-size:1.05rem;margin:0;font-weight:600;letter-spacing:-.01em;}
+  .home{
+    margin-left:auto;font-size:.8rem;text-decoration:none;
+    color:#cfcac1;border:1px solid #3a3d45;padding:5px 11px;border-radius:999px;
+    white-space:nowrap;transition:background .15s,color .15s;
+  }
+  .home:hover{background:#2a2d34;color:#fff;}
+
+  main{flex:1;width:100%;max-width:1080px;margin:0 auto;padding:22px 18px 34px;}
+  .lede{
+    font-size:.92rem;color:var(--muted);margin:0 0 20px;max-width:64ch;line-height:1.55;
+  }
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;}
+  .col{display:flex;flex-direction:column;gap:18px;}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;box-shadow:0 1px 0 rgba(22,24,29,.04);
+  }
+  .card h2{
+    font-size:.7rem;text-transform:uppercase;letter-spacing:.13em;
+    color:var(--muted);margin:0 0 14px;font-weight:600;
+  }
+
+  /* ---------- color fields ---------- */
+  .field{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .field:last-of-type{margin-bottom:0;}
+  .field label{
+    font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);width:74px;flex:none;font-weight:600;
+  }
+  .swatch{
+    width:44px;height:44px;flex:none;padding:0;border:1px solid var(--line);
+    border-radius:10px;background:none;cursor:pointer;overflow:hidden;
+  }
+  .swatch::-webkit-color-swatch-wrapper{padding:0;}
+  .swatch::-webkit-color-swatch{border:none;border-radius:9px;}
+  .swatch::-moz-color-swatch{border:none;border-radius:9px;}
+  .hexin{
+    flex:1;min-width:0;font-family:'JetBrains Mono',monospace;font-size:1rem;
+    text-transform:uppercase;padding:11px 12px;border:1px solid var(--line);
+    border-radius:10px;background:#fbfaf8;color:var(--ink);
+  }
+  .hexin:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .hexin.bad{border-color:var(--fail);background:var(--fail-bg);}
+  .mini{
+    flex:none;border:1px solid var(--line);background:#fbfaf8;color:var(--muted);
+    font-family:'Space Grotesk',sans-serif;font-size:.72rem;font-weight:600;
+    padding:0 10px;height:44px;border-radius:10px;cursor:pointer;
+    letter-spacing:.04em;
+  }
+  .mini:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .rowbtns{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .rowbtns .mini{height:38px;}
+
+  /* ---------- ratio ---------- */
+  .ratio-wrap{text-align:center;padding:4px 0 2px;}
+  .ratio{
+    font-family:'JetBrains Mono',monospace;font-weight:700;
+    font-size:clamp(3rem,13vw,4.4rem);line-height:1;letter-spacing:-.03em;
+    margin:0;cursor:pointer;
+  }
+  .ratio small{font-size:.32em;font-weight:500;color:var(--muted);letter-spacing:0;}
+  .verdict{
+    font-size:.86rem;color:var(--muted);margin:10px 0 0;min-height:1.2em;
+  }
+  .verdict b{color:var(--ink);}
+
+  /* ---------- badges ---------- */
+  .badges{display:flex;flex-direction:column;gap:8px;margin-top:16px;}
+  .badge{
+    display:flex;align-items:center;gap:10px;padding:9px 12px;
+    border-radius:10px;border:1px solid transparent;font-size:.85rem;
+  }
+  .badge .name{flex:1;font-weight:500;}
+  .badge .need{
+    font-family:'JetBrains Mono',monospace;font-size:.74rem;opacity:.7;
+  }
+  .badge .tag{
+    font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;
+    letter-spacing:.06em;padding:3px 8px;border-radius:6px;
+  }
+  .badge.pass{background:var(--pass-bg);border-color:#bfe0d4;color:#0f3d30;}
+  .badge.pass .tag{background:var(--pass);color:#fff;}
+  .badge.fail{background:var(--fail-bg);border-color:#f0c9c4;color:#5e1a14;}
+  .badge.fail .tag{background:var(--fail);color:#fff;}
+
+  /* ---------- preview ---------- */
+  .preview{
+    border-radius:var(--radius);padding:22px;border:1px solid var(--line);
+    transition:background .18s,color .18s;
+  }
+  .preview .pv-large{font-size:1.6rem;font-weight:700;margin:0 0 4px;line-height:1.2;}
+  .preview .pv-note{
+    font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.1em;
+    text-transform:uppercase;opacity:.65;margin:0 0 14px;
+  }
+  .preview .pv-body{font-size:1rem;line-height:1.6;margin:0 0 16px;}
+  .preview .pv-small{font-size:.8rem;line-height:1.6;margin:0 0 18px;opacity:.9;}
+  .pv-ui{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .pv-btn{
+    font-family:'Space Grotesk',sans-serif;font-size:.88rem;font-weight:600;
+    padding:9px 16px;border-radius:8px;border:none;cursor:default;
+  }
+  .pv-ghost{
+    font-family:'Space Grotesk',sans-serif;font-size:.88rem;font-weight:600;
+    padding:9px 16px;border-radius:8px;background:transparent;cursor:default;
+    border:2px solid currentColor;
+  }
+  .pv-rule{height:3px;border-radius:2px;background:currentColor;opacity:.55;flex:1;min-width:60px;}
+
+  /* ---------- fixes ---------- */
+  .fixes{display:flex;flex-wrap:wrap;gap:8px;}
+  .fix{
+    display:flex;align-items:center;gap:8px;padding:7px 11px 7px 7px;
+    border:1px solid var(--line);border-radius:999px;background:#fbfaf8;
+    cursor:pointer;font-size:.78rem;color:var(--ink);font-family:'Space Grotesk',sans-serif;
+  }
+  .fix:hover{border-color:var(--ink);}
+  .fix .dot{width:20px;height:20px;border-radius:50%;border:1px solid rgba(0,0,0,.18);flex:none;}
+  .fix code{font-family:'JetBrains Mono',monospace;font-size:.74rem;}
+  .fix .r{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.7rem;}
+  .empty{font-size:.82rem;color:var(--muted);margin:0;}
+
+  /* ---------- saved ---------- */
+  .saved{display:flex;flex-wrap:wrap;gap:8px;}
+  .pair{
+    position:relative;display:flex;align-items:center;justify-content:center;
+    width:58px;height:44px;border-radius:10px;border:1px solid var(--line);
+    cursor:pointer;font-weight:700;font-size:.95rem;overflow:hidden;
+  }
+  .pair span.x{
+    position:absolute;top:1px;right:3px;font-size:.72rem;line-height:1;
+    opacity:0;padding:2px 3px;border-radius:4px;
+  }
+  .pair:hover span.x{opacity:.85;}
+  .toast{
+    position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(140%);
+    background:var(--ink);color:#fff;font-size:.82rem;padding:10px 18px;
+    border-radius:999px;transition:transform .25s ease;z-index:40;pointer-events:none;
+  }
+  .toast.on{transform:translateX(-50%) translateY(0);}
+
+  footer{
+    text-align:center;font-size:.78rem;color:var(--muted);
+    padding:18px;border-top:1px solid var(--line);
+  }
+  footer a{color:var(--accent);text-decoration:none;font-weight:600;}
+  footer a:hover{text-decoration:underline;}
+
+  @media (max-width:880px){
+    .grid{grid-template-columns:1fr;}
+    .field label{width:62px;font-size:.68rem;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="num">095</span>
+  <h1>Contrast Checker</h1>
+  <a class="home" href="https://augustineiacopelli.github.io/appaday/">AppADay</a>
+</header>
+
+<main>
+  <p class="lede">Set a text color and a background color. The WCAG 2.1 contrast ratio updates as you type, with pass or fail marks for normal text, large text, and interface elements, plus the nearest color that would actually clear the bar.</p>
+
+  <div class="grid">
+    <div class="col">
+
+      <section class="card">
+        <h2>Colors</h2>
+        <div class="field">
+          <label for="fg-hex">Text</label>
+          <input type="color" class="swatch" id="fg-sw" value="#4a4a4a" aria-label="Text color picker">
+          <input type="text" class="hexin" id="fg-hex" value="#4A4A4A" spellcheck="false" autocomplete="off" aria-label="Text color hex">
+        </div>
+        <div class="field">
+          <label for="bg-hex">Background</label>
+          <input type="color" class="swatch" id="bg-sw" value="#edeae3" aria-label="Background color picker">
+          <input type="text" class="hexin" id="bg-hex" value="#EDEAE3" spellcheck="false" autocomplete="off" aria-label="Background color hex">
+        </div>
+        <div class="rowbtns">
+          <button class="mini" id="btn-swap" type="button">Swap</button>
+          <button class="mini" id="btn-random" type="button">Random pair</button>
+          <button class="mini" id="btn-save" type="button">Save pair</button>
+          <button class="mini" id="btn-css" type="button">Copy CSS</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Result</h2>
+        <div class="ratio-wrap">
+          <p class="ratio" id="ratio" title="Click to copy">1.00<small>:1</small></p>
+          <p class="verdict" id="verdict"></p>
+        </div>
+        <div class="badges" id="badges"></div>
+      </section>
+
+    </div>
+
+    <div class="col">
+
+      <section class="card">
+        <h2>Preview</h2>
+        <div class="preview" id="preview">
+          <p class="pv-note">Large text &#183; 24px bold</p>
+          <p class="pv-large">The quick brown fox</p>
+          <p class="pv-body">Normal body copy at sixteen pixels. WCAG treats anything under 18.66px bold or 24px regular as normal text, which is the stricter of the two thresholds.</p>
+          <p class="pv-small">Fine print at thirteen pixels, the size most footers and captions land on.</p>
+          <div class="pv-ui">
+            <button class="pv-btn" id="pv-btn" type="button" tabindex="-1">Solid button</button>
+            <button class="pv-ghost" type="button" tabindex="-1">Outlined</button>
+            <div class="pv-rule"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Nearest passing colors</h2>
+        <div class="fixes" id="fixes"></div>
+      </section>
+
+      <section class="card">
+        <h2>Saved pairs</h2>
+        <div class="saved" id="saved"></div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  App 095 of <a href="https://augustineiacopelli.github.io/appaday/">AppADay</a> by Augustine Iacopelli
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORE = "appaday-095-pairs";
+  var fgSw = document.getElementById("fg-sw");
+  var bgSw = document.getElementById("bg-sw");
+  var fgIn = document.getElementById("fg-hex");
+  var bgIn = document.getElementById("bg-hex");
+  var ratioEl = document.getElementById("ratio");
+  var verdictEl = document.getElementById("verdict");
+  var badgesEl = document.getElementById("badges");
+  var fixesEl = document.getElementById("fixes");
+  var savedEl = document.getElementById("saved");
+  var preview = document.getElementById("preview");
+  var pvBtn = document.getElementById("pv-btn");
+  var toastEl = document.getElementById("toast");
+  var probe = document.createElement("span");
+  probe.style.display = "none";
+  document.body.appendChild(probe);
+
+  var fg = [74,74,74];
+  var bg = [237,234,227];
+
+  // ---------- storage ----------
+  function load(){
+    try{
+      var raw = window.localStorage.getItem(STORE);
+      if(!raw) return [];
+      var v = JSON.parse(raw);
+      return Object.prototype.toString.call(v) === "[object Array]" ? v : [];
+    }catch(e){ return []; }
+  }
+  function save(list){
+    try{ window.localStorage.setItem(STORE, JSON.stringify(list)); }catch(e){}
+  }
+
+  // ---------- color parsing ----------
+  function clamp(n,lo,hi){ return n < lo ? lo : (n > hi ? hi : n); }
+
+  function parseColor(str){
+    if(!str) return null;
+    var s = String(str).trim().toLowerCase();
+    var m = /^#?([0-9a-f]{3,8})$/.exec(s);
+    if(m){
+      var h = m[1];
+      if(h.length === 3 || h.length === 4){
+        return [parseInt(h[0]+h[0],16), parseInt(h[1]+h[1],16), parseInt(h[2]+h[2],16)];
+      }
+      if(h.length === 6 || h.length === 8){
+        return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+      }
+      return null;
+    }
+    var r = /^rgba?\(\s*([0-9.]+)[,\s]+([0-9.]+)[,\s]+([0-9.]+)/.exec(s);
+    if(r){
+      return [clamp(Math.round(parseFloat(r[1])),0,255),
+              clamp(Math.round(parseFloat(r[2])),0,255),
+              clamp(Math.round(parseFloat(r[3])),0,255)];
+    }
+    // named CSS colors via a computed-style probe
+    if(/^[a-z]+$/.test(s)){
+      probe.style.color = "";
+      probe.style.color = s;
+      if(probe.style.color === ""){ return null; }
+      var comp = "";
+      try{ comp = window.getComputedStyle(probe).color; }catch(e){ comp = ""; }
+      var c = /^rgba?\(\s*([0-9.]+)[,\s]+([0-9.]+)[,\s]+([0-9.]+)/.exec(comp || "");
+      if(c){ return [Math.round(+c[1]), Math.round(+c[2]), Math.round(+c[3])]; }
+    }
+    return null;
+  }
+
+  function toHex(rgb){
+    var out = "#";
+    for(var i=0;i<3;i++){
+      var v = clamp(Math.round(rgb[i]),0,255).toString(16);
+      out += v.length === 1 ? "0"+v : v;
+    }
+    return out.toUpperCase();
+  }
+
+  // ---------- contrast math ----------
+  function chan(v){
+    var c = v/255;
+    return c <= 0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4);
+  }
+  function lum(rgb){
+    return 0.2126*chan(rgb[0]) + 0.7152*chan(rgb[1]) + 0.0722*chan(rgb[2]);
+  }
+  function contrast(a,b){
+    var la = lum(a), lb = lum(b);
+    var hi = la > lb ? la : lb, lo = la > lb ? lb : la;
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  // ---------- hsl helpers for suggestions ----------
+  function rgbToHsl(rgb){
+    var r = rgb[0]/255, g = rgb[1]/255, b = rgb[2]/255;
+    var mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+    var h = 0, s = 0, l = (mx+mn)/2;
+    var d = mx - mn;
+    if(d !== 0){
+      s = l > 0.5 ? d/(2-mx-mn) : d/(mx+mn);
+      if(mx === r){ h = ((g-b)/d + (g < b ? 6 : 0)); }
+      else if(mx === g){ h = (b-r)/d + 2; }
+      else { h = (r-g)/d + 4; }
+      h /= 6;
+    }
+    return [h,s,l];
+  }
+  function hue2rgb(p,q,t){
+    if(t < 0) t += 1;
+    if(t > 1) t -= 1;
+    if(t < 1/6) return p + (q-p)*6*t;
+    if(t < 1/2) return q;
+    if(t < 2/3) return p + (q-p)*(2/3 - t)*6;
+    return p;
+  }
+  function hslToRgb(hsl){
+    var h = hsl[0], s = hsl[1], l = hsl[2];
+    if(s === 0){ var g = Math.round(l*255); return [g,g,g]; }
+    var q = l < 0.5 ? l*(1+s) : l + s - l*s;
+    var p = 2*l - q;
+    return [Math.round(hue2rgb(p,q,h+1/3)*255),
+            Math.round(hue2rgb(p,q,h)*255),
+            Math.round(hue2rgb(p,q,h-1/3)*255)];
+  }
+
+  // Walk lightness outward from the current value until the target ratio is met.
+  function nearestPassing(color, other, target){
+    if(contrast(color, other) >= target) return null;
+    var hsl = rgbToHsl(color);
+    for(var step=1; step<=100; step++){
+      var d = step/100;
+      var down = hslToRgb([hsl[0], hsl[1], clamp(hsl[2]-d,0,1)]);
+      var up   = hslToRgb([hsl[0], hsl[1], clamp(hsl[2]+d,0,1)]);
+      var okDown = contrast(down, other) >= target;
+      var okUp   = contrast(up, other) >= target;
+      if(okDown && okUp){
+        return contrast(down,other) >= contrast(up,other) ? up : down;
+      }
+      if(okDown) return down;
+      if(okUp) return up;
+    }
+    return null;
+  }
+
+  // ---------- rendering ----------
+  var LEVELS = [
+    { name:"Normal text",  sub:"AA",  need:4.5 },
+    { name:"Large text",   sub:"AA",  need:3   },
+    { name:"Normal text",  sub:"AAA", need:7   },
+    { name:"Large text",   sub:"AAA", need:4.5 },
+    { name:"UI and graphics", sub:"AA", need:3 }
+  ];
+
+  function fmt(n){ return (Math.floor(n*100)/100).toFixed(2); }
+
+  function renderBadges(r){
+    while(badgesEl.firstChild){ badgesEl.removeChild(badgesEl.firstChild); }
+    for(var i=0;i<LEVELS.length;i++){
+      var L = LEVELS[i];
+      var ok = r >= L.need;
+      var row = document.createElement("div");
+      row.className = "badge " + (ok ? "pass" : "fail");
+
+      var name = document.createElement("span");
+      name.className = "name";
+      name.textContent = L.sub + " " + L.name;
+      row.appendChild(name);
+
+      var need = document.createElement("span");
+      need.className = "need";
+      need.textContent = fmt(L.need) + ":1";
+      row.appendChild(need);
+
+      var tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = ok ? "PASS" : "FAIL";
+      row.appendChild(tag);
+
+      badgesEl.appendChild(row);
+    }
+  }
+
+  function verdictText(r){
+    if(r >= 7) return "Clears every level, including <b>AAA normal text</b>.";
+    if(r >= 4.5) return "Good for body copy at <b>AA</b>, short of AAA.";
+    if(r >= 3) return "Large text and UI only. <b>Too weak for body copy.</b>";
+    return "<b>Below every threshold.</b> Push the two colors further apart.";
+  }
+
+  function chip(label, rgb, r, apply){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "fix";
+
+    var dot = document.createElement("span");
+    dot.className = "dot";
+    dot.style.background = toHex(rgb);
+    b.appendChild(dot);
+
+    var txt = document.createElement("span");
+    txt.textContent = label + " ";
+    b.appendChild(txt);
+
+    var code = document.createElement("code");
+    code.textContent = toHex(rgb);
+    b.appendChild(code);
+
+    var rr = document.createElement("span");
+    rr.className = "r";
+    rr.textContent = fmt(r) + ":1";
+    b.appendChild(rr);
+
+    b.addEventListener("click", apply);
+    return b;
+  }
+
+  function renderFixes(){
+    while(fixesEl.firstChild){ fixesEl.removeChild(fixesEl.firstChild); }
+    var targets = [{ t:4.5, label:"AA" }, { t:7, label:"AAA" }];
+    var made = 0;
+    for(var i=0;i<targets.length;i++){
+      (function(spec){
+        var f = nearestPassing(fg, bg, spec.t);
+        if(f){
+          made++;
+          fixesEl.appendChild(chip("Text " + spec.label, f, contrast(f,bg), function(){
+            setColors(f, bg, true);
+          }));
+        }
+        var g = nearestPassing(bg, fg, spec.t);
+        if(g){
+          made++;
+          fixesEl.appendChild(chip("Bg " + spec.label, g, contrast(fg,g), function(){
+            setColors(fg, g, true);
+          }));
+        }
+      })(targets[i]);
+    }
+    if(made === 0){
+      var p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "Nothing to fix. This pair already clears AAA at every size.";
+      fixesEl.appendChild(p);
+    }
+  }
+
+  function renderSaved(){
+    var list = load();
+    while(savedEl.firstChild){ savedEl.removeChild(savedEl.firstChild); }
+    if(list.length === 0){
+      var p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "No saved pairs yet. Hit Save pair to keep one around.";
+      savedEl.appendChild(p);
+      return;
+    }
+    for(var i=0;i<list.length;i++){
+      (function(item, idx){
+        var d = document.createElement("div");
+        d.className = "pair";
+        d.style.background = item.bg;
+        d.style.color = item.fg;
+        d.title = item.fg + " on " + item.bg;
+        var aa = document.createElement("span");
+        aa.textContent = "Aa";
+        d.appendChild(aa);
+        var x = document.createElement("span");
+        x.className = "x";
+        x.innerHTML = "&#215;";
+        x.addEventListener("click", function(ev){
+          ev.stopPropagation();
+          var cur = load();
+          cur.splice(idx,1);
+          save(cur);
+          renderSaved();
+        });
+        d.appendChild(x);
+        d.addEventListener("click", function(){
+          var a = parseColor(item.fg), b = parseColor(item.bg);
+          if(a && b) setColors(a, b, true);
+        });
+        savedEl.appendChild(d);
+      })(list[i], i);
+    }
+  }
+
+  function syncHash(){
+    try{
+      var h = "#" + toHex(fg).slice(1) + "-" + toHex(bg).slice(1);
+      if(window.history && window.history.replaceState){
+        window.history.replaceState(null, "", h);
+      }
+    }catch(e){}
+  }
+
+  function update(){
+    var r = contrast(fg, bg);
+    ratioEl.innerHTML = fmt(r) + "<small>:1</small>";
+    verdictEl.innerHTML = verdictText(r);
+    renderBadges(r);
+    renderFixes();
+
+    var fgHex = toHex(fg), bgHex = toHex(bg);
+    preview.style.background = bgHex;
+    preview.style.color = fgHex;
+    preview.style.borderColor = fgHex;
+    pvBtn.style.background = fgHex;
+    pvBtn.style.color = bgHex;
+    syncHash();
+  }
+
+  function setColors(newFg, newBg, writeInputs){
+    fg = newFg.slice();
+    bg = newBg.slice();
+    fgSw.value = toHex(fg).toLowerCase();
+    bgSw.value = toHex(bg).toLowerCase();
+    if(writeInputs){
+      fgIn.value = toHex(fg);
+      bgIn.value = toHex(bg);
+      fgIn.classList.remove("bad");
+      bgIn.classList.remove("bad");
+    }
+    update();
+  }
+
+  // ---------- toast ----------
+  var toastTimer = null;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("on");
+    if(toastTimer) window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(function(){ toastEl.classList.remove("on"); }, 1600);
+  }
+  function copy(text, msg){
+    var done = function(){ toast(msg); };
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, function(){ toast("Copy blocked by the browser"); });
+        return;
+      }
+    }catch(e){}
+    try{
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly","readonly");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      done();
+    }catch(e2){ toast("Copy blocked by the browser"); }
+  }
+
+  // ---------- events ----------
+  function bindHex(input, isFg){
+    input.addEventListener("input", function(){
+      var c = parseColor(input.value);
+      if(c){
+        input.classList.remove("bad");
+        if(isFg){ fg = c; fgSw.value = toHex(c).toLowerCase(); }
+        else { bg = c; bgSw.value = toHex(c).toLowerCase(); }
+        update();
+      }else{
+        input.classList.add("bad");
+      }
+    });
+    input.addEventListener("blur", function(){
+      var c = parseColor(input.value);
+      if(c){ input.value = toHex(c); input.classList.remove("bad"); }
+      else { input.value = toHex(isFg ? fg : bg); input.classList.remove("bad"); }
+    });
+  }
+  bindHex(fgIn, true);
+  bindHex(bgIn, false);
+
+  fgSw.addEventListener("input", function(){
+    var c = parseColor(fgSw.value);
+    if(c){ fg = c; fgIn.value = toHex(c); fgIn.classList.remove("bad"); update(); }
+  });
+  bgSw.addEventListener("input", function(){
+    var c = parseColor(bgSw.value);
+    if(c){ bg = c; bgIn.value = toHex(c); bgIn.classList.remove("bad"); update(); }
+  });
+
+  document.getElementById("btn-swap").addEventListener("click", function(){
+    setColors(bg.slice(), fg.slice(), true);
+  });
+
+  document.getElementById("btn-random").addEventListener("click", function(){
+    function rnd(){ return [Math.floor(Math.random()*256), Math.floor(Math.random()*256), Math.floor(Math.random()*256)]; }
+    var a = rnd(), b = rnd(), guard = 0;
+    while(contrast(a,b) < 2.2 && guard < 40){ b = rnd(); guard++; }
+    setColors(a, b, true);
+  });
+
+  document.getElementById("btn-save").addEventListener("click", function(){
+    var list = load();
+    var entry = { fg: toHex(fg), bg: toHex(bg) };
+    for(var i=0;i<list.length;i++){
+      if(list[i].fg === entry.fg && list[i].bg === entry.bg){ toast("Already saved"); return; }
+    }
+    list.unshift(entry);
+    if(list.length > 14) list = list.slice(0,14);
+    save(list);
+    renderSaved();
+    toast("Pair saved");
+  });
+
+  document.getElementById("btn-css").addEventListener("click", function(){
+    var css = "color: " + toHex(fg).toLowerCase() + ";\nbackground-color: " + toHex(bg).toLowerCase()
+            + ";\n/* contrast " + fmt(contrast(fg,bg)) + ":1 */";
+    copy(css, "CSS copied");
+  });
+
+  ratioEl.addEventListener("click", function(){
+    copy(fmt(contrast(fg,bg)) + ":1", "Ratio copied");
+  });
+
+  // ---------- init ----------
+  function init(){
+    var a = null, b = null;
+    try{
+      var h = (window.location.hash || "").replace("#","");
+      var parts = h.split("-");
+      if(parts.length === 2){
+        a = parseColor(parts[0]);
+        b = parseColor(parts[1]);
+      }
+    }catch(e){}
+    if(a && b){ setColors(a, b, true); }
+    else { setColors(fg, bg, true); }
+    renderSaved();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
